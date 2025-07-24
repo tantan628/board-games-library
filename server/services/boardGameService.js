@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 import { parseStringPromise } from 'xml2js'
 import Game from '../models/game.js'
 
-const LIMIT = 24
+const LIMIT = 20
 
 export async function fetchSearchResults(query) {
   const response = await fetch(
