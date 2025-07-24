@@ -16,7 +16,7 @@ export default function useSearch(query: string) {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
         const data = await res.json()
-        setResults(data.slice(0, 24))
+        setResults(data.slice(0, 20))
       } catch (err) {
         console.error(err)
       } finally {
