@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 interface Game {
@@ -6,6 +6,10 @@ interface Game {
   name: string
   yearpublished?: string
   image?: string
+  minage?: string
+  minplayers?: string
+  maxplayers?: string
+  categories?: string[]
 }
 
 function App() {
@@ -13,54 +17,72 @@ function App() {
   const [results, setResults] = useState<Game[]>([])
   const [loading, setLoading] = useState(false)
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!query.trim()) return
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-      const data = await res.json()
-      setResults(data.slice(0, 10))
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([])
+      return
     }
-  }
+
+    const handler = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        const data = await res.json()
+        setResults(data.slice(0, 24))
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(handler)
+  }, [query])
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Board Games Library</h1>
 
-      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
+      <div className="mb-4">
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={e => setQuery(e.target.value)}
           placeholder="Search board games"
-          className="border p-2 flex-grow"
+          className="border p-2 w-full"
         />
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Search
-        </button>
-      </form>
+      </div>
 
       {loading && <p>Loading...</p>}
 
       <ul>
-        {results.map((game) => (
-          <li key={game.id} className="flex items-center mb-2">
+        {results.map(game => (
+          <li key={game.id} className="flex items-start mb-4">
             {game.image && (
               <img
                 src={game.image}
-                alt=""
-                className="w-12 h-12 object-cover mr-2"
+                alt={game.name}
+                className="w-16 h-16 object-cover mr-4"
               />
             )}
-            <span>{game.name}</span>
+            <div>
+              <div className="font-semibold">
+                {game.name} {game.yearpublished && `(${game.yearpublished})`}
+              </div>
+              {game.minage && (
+                <div className="text-sm text-gray-600">Age: {game.minage}+</div>
+              )}
+              {game.minplayers && game.maxplayers && (
+                <div className="text-sm text-gray-600">
+                  Players: {game.minplayers}-{game.maxplayers}
+                </div>
+              )}
+              {game.categories && game.categories.length > 0 && (
+                <div className="text-sm text-gray-600">
+                  Genres: {game.categories.join(', ')}
+                </div>
+              )}
+            </div>
           </li>
         ))}
       </ul>

@@ -14,17 +14,20 @@ app.get('/api/search', async (req, res) => {
     return res.status(400).json({ error: 'Missing query' })
   }
   try {
+    const LIMIT = 24
     const response = await fetch(
-      `https://api.geekdo.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame`
+      `https://api.geekdo.com/xmlapi2/search?query=${encodeURIComponent(
+        query
+      )}&type=boardgame`
     )
     const xml = await response.text()
     const result = await parseStringPromise(xml, { explicitArray: false })
     const items = result.items && result.items.item ? result.items.item : []
     const games = Array.isArray(items) ? items : [items]
 
-    const limited = games.slice(0, 10)
+    const limited = games.slice(0, LIMIT)
     const ids = limited.map(g => g.$.id)
-    let images = {}
+    let details = {}
 
     if (ids.length) {
       const detailRes = await fetch(
@@ -39,8 +42,20 @@ app.get('/api/search', async (req, res) => {
           ? detailResult.items.item
           : []
       const detailList = Array.isArray(detailItems) ? detailItems : [detailItems]
-      images = detailList.reduce((acc, item) => {
-        acc[item.$.id] = item.image
+      details = detailList.reduce((acc, item) => {
+        const id = item.$.id
+        const links = item.link ? (Array.isArray(item.link) ? item.link : [item.link]) : []
+        const categories = links
+          .filter(l => l.$.type === 'boardgamecategory')
+          .map(l => l.$.value)
+        acc[id] = {
+          image: item.image,
+          yearpublished: item.yearpublished?.$.value,
+          minage: item.minage?.$.value,
+          minplayers: item.minplayers?.$.value,
+          maxplayers: item.maxplayers?.$.value,
+          categories
+        }
         return acc
       }, {})
     }
@@ -49,8 +64,12 @@ app.get('/api/search', async (req, res) => {
       limited.map(g => ({
         id: g.$.id,
         name: g.name.$.value,
-        yearpublished: g.yearpublished?.$.value,
-        image: images[g.$.id]
+        yearpublished: details[g.$.id]?.yearpublished,
+        image: details[g.$.id]?.image,
+        minage: details[g.$.id]?.minage,
+        minplayers: details[g.$.id]?.minplayers,
+        maxplayers: details[g.$.id]?.maxplayers,
+        categories: details[g.$.id]?.categories
       }))
     )
   } catch (err) {
