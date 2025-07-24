@@ -2,13 +2,20 @@ import fetch from 'node-fetch'
 import { parseStringPromise } from 'xml2js'
 import Game from '../models/game.js'
 
-const LIMIT = 24
+const LIMIT = 20
 
 export async function fetchSearchResults(query) {
   const response = await fetch(
     `https://api.geekdo.com/xmlapi2/search?query=${encodeURIComponent(query)}&type=boardgame`
   )
   const xml = await response.text()
+  if (!response.ok) {
+    console.error(
+      `Error fetching search results: ${response.status} ${response.statusText}`
+    )
+    console.error(xml)
+    throw new Error('Failed to fetch search results')
+  }
   const result = await parseStringPromise(xml, { explicitArray: false })
   const items = result.items && result.items.item ? result.items.item : []
   const games = Array.isArray(items) ? items : [items]
@@ -22,6 +29,13 @@ export async function fetchSearchResults(query) {
       `https://api.geekdo.com/xmlapi2/thing?id=${ids.join(',')}`
     )
     const detailXml = await detailRes.text()
+    if (!detailRes.ok) {
+      console.error(
+        `Error fetching game details: ${detailRes.status} ${detailRes.statusText}`
+      )
+      console.error(detailXml)
+      throw new Error('Failed to fetch game details')
+    }
     const detailResult = await parseStringPromise(detailXml, { explicitArray: false })
     const detailItems =
       detailResult.items && detailResult.items.item ? detailResult.items.item : []
